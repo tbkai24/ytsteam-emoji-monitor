@@ -35,14 +35,14 @@ function Navbar() {
   return (
     <header className="navbar">
       <div className="container navbar-inner">
-        <div className="public-brand-wrap">
+        <NavLink to="/" className="public-brand-wrap" end onClick={() => setMenuOpen(false)}>
           {logoUrl ? (
             <img src={logoUrl} alt={`${websiteName} logo`} className="public-logo" />
           ) : (
             <span className="public-brand-mark">o</span>
           )}
           <div className={logoUrl ? 'brand brand-compact' : 'brand'}>{websiteName}</div>
-        </div>
+        </NavLink>
         <button
           type="button"
           className="navbar-menu-btn"
