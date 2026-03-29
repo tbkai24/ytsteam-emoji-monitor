@@ -63,6 +63,7 @@ function EmbedsManager() {
   const [dragOverId, setDragOverId] = useState<string | null>(null)
   const thumbInputRef = useRef<HTMLInputElement | null>(null)
   const formCardRef = useRef<HTMLDivElement | null>(null)
+  const lastSuggestedUrlRef = useRef('')
 
   const loadEmbeds = useCallback(async () => {
     setLoading(true)
@@ -178,12 +179,15 @@ function EmbedsManager() {
         return
       }
 
+      const normalizedUrl = sourceUrl.trim()
+      lastSuggestedUrlRef.current = normalizedUrl
       setSuggesting(true)
       setSuggestionError(null)
 
-      const suggestion = await fetchSuggestion(sourceUrl)
-      const fallbackTitle = deriveTitleFromUrl(sourceUrl)
+      const suggestion = await fetchSuggestion(normalizedUrl)
+      const fallbackTitle = deriveTitleFromUrl(normalizedUrl)
       const finalTitle = suggestion.title?.trim() || fallbackTitle
+      if (lastSuggestedUrlRef.current !== normalizedUrl) return
       setSuggestedTitle(finalTitle)
       setSuggestedThumbnail(suggestion.thumbnail ?? null)
 
@@ -194,6 +198,33 @@ function EmbedsManager() {
     },
     [fetchSuggestion, title, titleTouched],
   )
+
+  useEffect(() => {
+    const trimmedUrl = url.trim()
+
+    if (!showForm || !trimmedUrl || !isHttpUrl(trimmedUrl)) {
+      if (!trimmedUrl) {
+        lastSuggestedUrlRef.current = ''
+        setSuggestedTitle(null)
+        setSuggestedThumbnail(null)
+        setSuggestionError(null)
+        setSuggesting(false)
+      }
+      return
+    }
+
+    if (editingId && trimmedUrl === (rows.find((row) => row.id === editingId)?.url ?? '').trim()) {
+      return
+    }
+
+    if (trimmedUrl === lastSuggestedUrlRef.current) return
+
+    const timer = window.setTimeout(() => {
+      void applySuggestionFromUrl(trimmedUrl, true)
+    }, 450)
+
+    return () => window.clearTimeout(timer)
+  }, [applySuggestionFromUrl, editingId, rows, showForm, url])
 
   const uploadThumbnail = async (file: File) => {
     setUploadingThumb(true)
@@ -225,6 +256,7 @@ function EmbedsManager() {
     setSelectedFileName('Choose the files to upload')
     setSuggestionError(null)
     setTitleTouched(false)
+    lastSuggestedUrlRef.current = ''
     setShowForm(false)
   }
 
